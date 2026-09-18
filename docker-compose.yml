@@ -1,0 +1,18 @@
+# Runs just the backend (which also serves the frontend). Neo4j is your
+# existing Aura cloud instance -- no local Neo4j container needed.
+#
+# Usage:
+#   1. cp backend/.env.example backend/.env   (then fill in real values)
+#   2. docker compose up --build
+#   3. open http://localhost:8000
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "8000:8000"
+    env_file:
+      - backend/.env
+    restart: unless-stopped

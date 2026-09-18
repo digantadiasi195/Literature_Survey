@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AR + Skeleton Safety — Literature Survey</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<style>
+  :root{
+    --bg:#EEEBE2; --panel:#FFFFFF; --panel-2:#F6F3EC; --line:#DAD5C6;
+    --text:#1B2430; --text-dim:#5B6570; --accent:#C4531D; --accent-ink:#FFFFFF;
+    --m0:#8A8A8A; --m1:#2F6FA8; --m2:#1E8F6B; --m3:#6E4FC4; --m4:#B38A14; --m5:#C23A54; --m6:#8A3E22; --m7:#2A7E93;
+    --radius:10px; --shadow:0 1px 2px rgba(20,20,15,.08);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#12181F; --panel:#1A222B; --panel-2:#171F27; --line:#2A3540;
+      --text:#E7EDF2; --text-dim:#8FA0AC; --accent:#F2A33D; --accent-ink:#12181F;
+      --shadow:0 1px 3px rgba(0,0,0,.4);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#12181F; --panel:#1A222B; --panel-2:#171F27; --line:#2A3540;
+    --text:#E7EDF2; --text-dim:#8FA0AC; --accent:#F2A33D; --accent-ink:#12181F;
+    --shadow:0 1px 3px rgba(0,0,0,.4);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{background:var(--bg); color:var(--text); font-family:"IBM Plex Sans",system-ui,sans-serif; line-height:1.5;}
+  a{color:var(--accent);}
+  .wrap{max-width:1180px; margin:0 auto; padding:28px 20px 80px;}
+  header.top{display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:6px;}
+  .eyebrow{font-family:"IBM Plex Mono",monospace; font-size:12.5px; color:var(--text-dim);}
+  h1{font-family:"Space Grotesk",sans-serif; font-weight:700; font-size:clamp(24px,4vw,34px); margin:4px 0 6px; letter-spacing:-.01em;}
+  .sub{color:var(--text-dim); font-size:14.5px; max-width:58ch;}
+
+  .upload-box{
+    background:var(--panel); border:1.5px dashed var(--line); border-radius:var(--radius);
+    padding:20px; text-align:center; min-width:240px; box-shadow:var(--shadow);
+  }
+  .upload-box.drag{border-color:var(--accent); background:var(--panel-2);}
+  .upload-box p{margin:6px 0 0; font-size:12.5px; color:var(--text-dim);}
+  .upload-box input{display:none;}
+  .upload-status{font-size:12.5px; margin-top:8px; font-family:"IBM Plex Mono",monospace;}
+
+  .statrow{display:flex; flex-wrap:wrap; gap:10px; margin:22px 0 26px;}
+  .stat{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:12px 16px; min-width:110px; box-shadow:var(--shadow);}
+  .stat .n{font-family:"Space Grotesk",sans-serif; font-size:24px; font-weight:700;}
+  .stat .l{font-size:12px; color:var(--text-dim); margin-top:2px;}
+
+  .legend{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:22px;}
+  .chip{display:inline-flex; align-items:center; gap:7px; border:1px solid var(--line); background:var(--panel); border-radius:999px; padding:6px 12px 6px 10px; font-size:13px; cursor:pointer;}
+  .chip .dot{width:9px; height:9px; border-radius:50%;}
+  .chip .count{color:var(--text-dim); font-family:"IBM Plex Mono",monospace; font-size:11.5px;}
+  .chip.active{border-color:var(--text); background:var(--panel-2);}
+
+  section.panel{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); margin-bottom:24px; overflow:hidden; box-shadow:var(--shadow);}
+  .panel h2{font-family:"Space Grotesk",sans-serif; font-size:15px; font-weight:600; margin:0; padding:14px 18px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; gap:10px;}
+  .panel h2 small{font-family:"IBM Plex Mono",monospace; font-weight:400; color:var(--text-dim); font-size:12px;}
+
+  .row{display:grid; grid-template-columns:80px 8px 1fr 90px 90px 20px; gap:12px; align-items:center; padding:12px 18px; border-bottom:1px solid var(--line); cursor:pointer;}
+  .row:last-child{border-bottom:none;}
+  .row:hover{background:var(--panel-2);}
+  .id-badge{font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--text-dim);}
+  .m-dot{width:8px; height:8px; border-radius:50%;}
+  .p-title{font-weight:500; font-size:14.5px;}
+  .p-venue{font-size:12.5px; color:var(--text-dim); margin-top:1px;}
+  .p-year{font-family:"IBM Plex Mono",monospace; font-size:13px; color:var(--text-dim);}
+  .rel-tag{font-size:11px; font-family:"IBM Plex Mono",monospace; padding:2px 7px; border-radius:4px; width:fit-content;}
+  .rel-y{background:rgba(30,143,107,.15); color:#1E8F6B;}
+  .chev{transition:transform .15s ease; color:var(--text-dim); justify-self:end;}
+  .row.open .chev{transform:rotate(90deg);}
+
+  .detail{display:none; padding:4px 18px 20px 98px; border-bottom:1px solid var(--line); background:var(--panel-2);}
+  .detail.open{display:block;}
+  .detail-grid{display:grid; grid-template-columns:1fr 1fr; gap:14px 26px; margin-top:8px;}
+  .detail-field h4{margin:0 0 4px; font-size:11.5px; color:var(--text-dim); font-family:"IBM Plex Mono",monospace; font-weight:500;}
+  .detail-field p{margin:0; font-size:13.5px; white-space:pre-wrap;}
+  .detail-field textarea{width:100%; font-family:inherit; font-size:13.5px; padding:6px; border-radius:6px; border:1px solid var(--line); background:var(--panel); color:var(--text); resize:vertical;}
+  .detail-full{grid-column:1/-1;}
+  .detail-actions{margin-top:14px; display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
+  .btn{font-family:"IBM Plex Sans",sans-serif; font-size:13px; font-weight:500; border:1px solid var(--line); background:var(--panel); color:var(--text); border-radius:7px; padding:7px 13px; cursor:pointer;}
+  .btn:hover{border-color:var(--accent);}
+  .btn.primary{background:var(--accent); color:var(--accent-ink); border-color:var(--accent);}
+  .btn.danger{color:#C23A54; border-color:#C23A54;}
+
+  .comments{margin-top:16px; border-top:1px solid var(--line); padding-top:12px;}
+  .comment{padding:8px 0; border-bottom:1px dashed var(--line);}
+  .comment:last-child{border-bottom:none;}
+  .comment .who{font-family:"IBM Plex Mono",monospace; font-size:11.5px; color:var(--text-dim);}
+  .comment p{margin:2px 0 0; font-size:13px;}
+  .comment-form{display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;}
+  .comment-form input[type=text]{flex:1; min-width:140px; padding:7px 10px; border-radius:6px; border:1px solid var(--line); background:var(--panel); color:var(--text); font-family:inherit; font-size:13px;}
+  .comment-form input[name=author]{max-width:140px;}
+
+  #graph-wrap{padding:14px 18px 18px;}
+  #graph{width:100%; height:440px; display:block;}
+  .graph-legend{display:flex; flex-wrap:wrap; gap:14px; padding:0 18px 16px; font-size:12px; color:var(--text-dim);}
+  .graph-legend span{display:inline-flex; align-items:center; gap:6px;}
+  .graph-legend .ln{width:18px; height:0; border-top:2px solid var(--text-dim); display:inline-block;}
+
+  .empty{padding:40px 18px; text-align:center; color:var(--text-dim); font-size:14px;}
+  footer{color:var(--text-dim); font-size:12px; margin-top:10px; text-align:center;}
+
+  @media (max-width:720px){
+    .row{grid-template-columns:1fr 20px;}
+    .row > .id-badge, .row > .m-dot, .row > .p-year, .row > .rel-tag{display:none;}
+    .detail{padding-left:18px;}
+    .detail-grid{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div>
+      <div class="eyebrow">Warsaw University of Technology · PhD literature survey</div>
+      <h1>AR + Skeleton-Based Safety — Literature Survey</h1>
+      <div class="sub">Upload a paper PDF; Gemini extracts the fields and Neo4j stores it. The table and relationship graph update automatically.</div>
+    </div>
+    <div class="upload-box" id="upload-box">
+      <div style="font-size:26px;">📄⇢🧠</div>
+      <div style="font-weight:600; font-size:14px; margin-top:4px;">Drop a paper PDF here</div>
+      <p>or click to choose a file</p>
+      <p id="upload-status" class="upload-status"></p>
+      <input type="file" id="file-input" accept="application/pdf">
+    </div>
+  </header>
+
+  <div class="statrow" id="stats"></div>
+  <div class="legend" id="legend"></div>
+
+  <section class="panel">
+    <h2>Papers <small id="table-count"></small></h2>
+    <div id="table"></div>
+  </section>
+
+  <section class="panel">
+    <h2>How the papers relate <small>same module (gray) · shared taxonomy tag (colored, labeled) · drag nodes</small></h2>
+    <div id="graph-wrap"><svg id="graph"></svg></div>
+  </section>
+
+  <footer>Self-hosted literature survey — data lives in your own Neo4j instance.</footer>
+</div>
+
+<script>
+const API = ""; // same-origin; set to e.g. "https://your-backend.example.com" if frontend is hosted separately
+
+const MODULES = {
+  0:{name:"Unclassified", color:"var(--m0)"},
+  1:{name:"Vision-Based Human Monitoring", color:"var(--m1)"},
+  2:{name:"Pose Estimation", color:"var(--m2)"},
+  3:{name:"Skeleton-Based Action Recognition", color:"var(--m3)"},
+  4:{name:"Multi-Step Task Recognition", color:"var(--m4)"},
+  5:{name:"AR for Industrial Safety", color:"var(--m5)"},
+  6:{name:"Safety Monitoring & Risk Assessment", color:"var(--m6)"},
+  7:{name:"AR Visualization & HCI", color:"var(--m7)"}
+};
+
+const state = { filter:null, papers:[], graph:{nodes:[],edges:[]} };
+
+async function api(path, opts={}){
+  const res = await fetch(API + path, {
+    headers: {"Content-Type":"application/json", ...(opts.headers||{})},
+    ...opts,
+  });
+  if(!res.ok){
+    const body = await res.text().catch(()=> "");
+    throw new Error(`${res.status}: ${body}`);
+  }
+  return res.status === 204 ? null : res.json();
+}
+
+async function loadAll(){
+  const [papers, graph] = await Promise.all([
+    api("/api/papers"),
+    api("/api/graph"),
+  ]);
+  state.papers = papers;
+  state.graph = graph;
+  renderStats(); renderLegend(); renderTable(); renderGraph();
+}
+
+function countsByModule(){
+  const c = {}; Object.keys(MODULES).forEach(k=>c[k]=0);
+  state.papers.forEach(p=>{ const m = p.module ?? 0; c[m] = (c[m]||0)+1; });
+  return c;
+}
+
+function renderStats(){
+  const rel = state.papers.filter(p=>p.relevant).length;
+  const modsCovered = new Set(state.papers.map(p=>p.module)).size;
+  document.getElementById("stats").innerHTML = `
+    <div class="stat"><div class="n">${state.papers.length}</div><div class="l">papers logged</div></div>
+    <div class="stat"><div class="n">${modsCovered}/7</div><div class="l">modules covered</div></div>
+    <div class="stat"><div class="n">${rel}</div><div class="l">marked relevant</div></div>
+    <div class="stat"><div class="n">${state.graph.edges.length}</div><div class="l">relations mapped</div></div>
+  `;
+}
+
+function renderLegend(){
+  const counts = countsByModule();
+  const el = document.getElementById("legend");
+  el.innerHTML = Object.entries(MODULES).filter(([k])=>k!=="0"||counts[0]).map(([k,m])=>`
+    <button class="chip ${state.filter==k?'active':''}" data-mod="${k}">
+      <span class="dot" style="background:${m.color}"></span>${m.name}
+      <span class="count">${counts[k]||0}</span>
+    </button>`).join("") + `<button class="chip ${state.filter===null?'active':''}" data-mod="">All</button>`;
+  el.querySelectorAll(".chip").forEach(b=>b.addEventListener("click", ()=>{
+    state.filter = b.dataset.mod === "" ? null : Number(b.dataset.mod);
+    renderLegend(); renderTable();
+  }));
+}
+
+function esc(s){ return (s??"").toString().replace(/[&<>]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+
+function renderTable(){
+  const list = state.papers.filter(p => state.filter===null || (p.module??0)===state.filter);
+  document.getElementById("table-count").textContent = `${list.length} shown`;
+  const el = document.getElementById("table");
+  if(list.length === 0){
+    el.innerHTML = `<div class="empty">No papers yet — upload a PDF above to get started.</div>`;
+    return;
+  }
+  el.innerHTML = list.map(p => {
+    const m = MODULES[p.module] || MODULES[0];
+    return `
+    <div>
+      <div class="row" data-id="${p.id}">
+        <span class="id-badge">${p.id}</span>
+        <span class="m-dot" style="background:${m.color}"></span>
+        <span><span class="p-title">${esc(p.title)}</span><div class="p-venue">${m.name} · ${esc(p.venue)}</div></span>
+        <span class="p-year">${p.year||""}</span>
+        <span class="rel-tag ${p.relevant?'rel-y':''}">${p.relevant?'RELEVANT':'—'}</span>
+        <span class="chev">›</span>
+      </div>
+      <div class="detail" id="detail-${p.id}"></div>
+    </div>`;
+  }).join("");
+
+  el.querySelectorAll(".row").forEach(row=>{
+    row.addEventListener("click", ()=>{
+      const id = row.dataset.id;
+      const det = document.getElementById("detail-"+id);
+      const wasOpen = det.classList.contains("open");
+      el.querySelectorAll(".detail.open").forEach(d=>{d.classList.remove("open"); d.innerHTML="";});
+      el.querySelectorAll(".row.open").forEach(r=>r.classList.remove("open"));
+      if(!wasOpen){
+        const p = state.papers.find(x=>x.id===id);
+        det.innerHTML = renderDetail(p);
+        det.classList.add("open"); row.classList.add("open");
+        wireDetail(det, p);
+      }
+    });
+  });
+}
+
+function renderDetail(p){
+  return `
+    <div class="detail-grid">
+      <div class="detail-field"><h4>Objective</h4><p>${esc(p.objective)}</p></div>
+      <div class="detail-field"><h4>Dataset</h4><p>${esc(p.dataset)}</p></div>
+      <div class="detail-field"><h4>Model / Method</h4><p>${esc(p.model)}</p></div>
+      <div class="detail-field"><h4>Best performance</h4><p>${esc(p.best_performance)}</p></div>
+      <div class="detail-field detail-full"><h4>Strengths</h4><p>${esc(p.strengths)}</p></div>
+      <div class="detail-field detail-full"><h4>Weaknesses</h4><p>${esc(p.weaknesses)}</p></div>
+      <div class="detail-field detail-full"><h4>Research gap</h4><p>${esc(p.research_gap)}</p></div>
+      <div class="detail-field"><h4>Taxonomy</h4><p>${esc(p.taxonomy)}</p></div>
+      <div class="detail-field"><h4>Evaluation metrics</h4><p>${esc(p.evaluation_metrics)}</p></div>
+    </div>
+    <div class="detail-actions">
+      ${p.link ? `<a class="btn" href="${esc(p.link)}" target="_blank" rel="noopener">Open source ↗</a>` : ""}
+      <button class="btn danger" data-action="delete">Delete paper</button>
+      <span class="save-note" style="font-size:12px;color:var(--text-dim);"></span>
+    </div>
+    <div class="comments">
+      <h4 style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:var(--text-dim); margin:0 0 8px;">Comments</h4>
+      <div class="comment-list">Loading…</div>
+      <div class="comment-form">
+        <input type="text" name="author" placeholder="Your name">
+        <input type="text" name="text" placeholder="Leave a comment on this paper…">
+        <button class="btn primary" data-action="post-comment">Post</button>
+      </div>
+    </div>
+  `;
+}
+
+async function wireDetail(det, p){
+  det.querySelector('[data-action="delete"]').addEventListener("click", async (e)=>{
+    e.stopPropagation();
+    if(!confirm(`Delete "${p.title}"? This can't be undone.`)) return;
+    await api(`/api/papers/${p.id}`, {method:"DELETE"});
+    await loadAll();
+  });
+
+  const list = det.querySelector(".comment-list");
+  try{
+    const comments = await api(`/api/papers/${p.id}/comments`);
+    list.innerHTML = comments.length
+      ? comments.map(c=>`<div class="comment"><span class="who">${esc(c.author)}</span><p>${esc(c.text)}</p></div>`).join("")
+      : `<div class="comment" style="color:var(--text-dim); font-size:13px;">No comments yet.</div>`;
+  }catch(err){
+    list.innerHTML = `<div class="comment" style="color:var(--text-dim); font-size:13px;">Couldn't load comments.</div>`;
+  }
+
+  det.querySelector('[data-action="post-comment"]').addEventListener("click", async (e)=>{
+    e.stopPropagation();
+    const author = det.querySelector('input[name=author]').value.trim() || "Anonymous";
+    const text = det.querySelector('input[name=text]').value.trim();
+    if(!text) return;
+    await api(`/api/papers/${p.id}/comments`, {method:"POST", body: JSON.stringify({author, text})});
+    det.querySelector('input[name=text]').value = "";
+    const comments = await api(`/api/papers/${p.id}/comments`);
+    list.innerHTML = comments.map(c=>`<div class="comment"><span class="who">${esc(c.author)}</span><p>${esc(c.text)}</p></div>`).join("");
+  });
+}
+
+function renderGraph(){
+  const svg = d3.select("#graph");
+  const wrap = document.getElementById("graph-wrap");
+  const width = wrap.clientWidth || 900, height = 440;
+  svg.attr("viewBox", `0 0 ${width} ${height}`);
+  svg.selectAll("*").remove();
+
+  const nodes = state.graph.nodes.map(n=>({...n}));
+  if(nodes.length === 0){
+    svg.append("text").attr("x", width/2).attr("y", height/2).attr("text-anchor","middle")
+      .attr("fill","var(--text-dim)").attr("font-family","IBM Plex Sans").text("No papers yet.");
+    return;
+  }
+  const idIndex = new Map(nodes.map(n=>[n.id,n]));
+  const links = state.graph.edges.filter(e=>idIndex.has(e.source) && idIndex.has(e.target));
+
+  const sim = d3.forceSimulation(nodes)
+    .force("link", d3.forceLink(links).id(d=>d.id).distance(90).strength(0.5))
+    .force("charge", d3.forceManyBody().strength(-160))
+    .force("center", d3.forceCenter(width/2, height/2))
+    .force("collide", d3.forceCollide(24));
+
+  const accent = getComputedStyle(document.documentElement).getPropertyValue("--accent");
+  const dim = getComputedStyle(document.documentElement).getPropertyValue("--text-dim");
+
+  const link = svg.append("g").selectAll("line").data(links).join("line")
+    .attr("stroke", d => d.type==="topic" ? accent : dim)
+    .attr("stroke-width", d => d.type==="topic" ? 2 : 1.1)
+    .attr("opacity", d => d.type==="topic" ? 0.85 : 0.4);
+
+  link.append("title").text(d=>d.label||"same module");
+
+  const node = svg.append("g").selectAll("g").data(nodes).join("g")
+    .style("cursor","pointer")
+    .call(d3.drag()
+      .on("start",(ev,d)=>{ if(!ev.active) sim.alphaTarget(0.3).restart(); d.fx=d.x; d.fy=d.y; })
+      .on("drag",(ev,d)=>{ d.fx=ev.x; d.fy=ev.y; })
+      .on("end",(ev,d)=>{ if(!ev.active) sim.alphaTarget(0); d.fx=null; d.fy=null; }));
+
+  node.append("circle").attr("r", 9)
+    .attr("fill", d => getComputedStyle(document.documentElement).getPropertyValue("--m"+(d.module||0)))
+    .attr("stroke","var(--bg)").attr("stroke-width",2);
+  node.append("title").text(d => `${d.id} — ${d.title}`);
+  node.append("text").text(d=>d.id).attr("font-family","IBM Plex Mono, monospace")
+    .attr("font-size",9).attr("fill","var(--text-dim)").attr("x",11).attr("y",4);
+
+  node.on("click", (ev,d) => {
+    const row = document.querySelector(`.row[data-id="${d.id}"]`);
+    if(row){ row.scrollIntoView({behavior:"smooth", block:"center"}); row.click(); }
+  });
+
+  sim.on("tick", ()=>{
+    link.attr("x1",d=>d.source.x).attr("y1",d=>d.source.y).attr("x2",d=>d.target.x).attr("y2",d=>d.target.y);
+    node.attr("transform", d=>`translate(${d.x},${d.y})`);
+  });
+}
+
+/* ---------- upload ---------- */
+const uploadBox = document.getElementById("upload-box");
+const fileInput = document.getElementById("file-input");
+const uploadStatus = document.getElementById("upload-status");
+
+uploadBox.addEventListener("click", ()=>fileInput.click());
+["dragenter","dragover"].forEach(evt=>uploadBox.addEventListener(evt, e=>{e.preventDefault(); uploadBox.classList.add("drag");}));
+["dragleave","drop"].forEach(evt=>uploadBox.addEventListener(evt, e=>{e.preventDefault(); uploadBox.classList.remove("drag");}));
+uploadBox.addEventListener("drop", e=>{ if(e.dataTransfer.files[0]) handleUpload(e.dataTransfer.files[0]); });
+fileInput.addEventListener("change", ()=>{ if(fileInput.files[0]) handleUpload(fileInput.files[0]); fileInput.value=""; });
+
+async function handleUpload(file){
+  if(!file.name.toLowerCase().endsWith(".pdf")){
+    uploadStatus.textContent = "Please choose a PDF file.";
+    return;
+  }
+  uploadStatus.textContent = "Reading PDF and analyzing with Gemini… (10-30s)";
+  const form = new FormData();
+  form.append("file", file);
+  try{
+    const res = await fetch(API + "/api/papers/upload", {method:"POST", body: form});
+    if(!res.ok){
+      const msg = await res.text();
+      throw new Error(msg);
+    }
+    const paper = await res.json();
+    uploadStatus.textContent = `Added "${paper.title}" ✓`;
+    await loadAll();
+  }catch(err){
+    console.error(err);
+    uploadStatus.textContent = "Failed — see console for details.";
+  }
+}
+
+loadAll().catch(err=>{
+  console.error(err);
+  document.getElementById("table").innerHTML =
+    `<div class="empty">Couldn't reach the backend API. Is it running? (${err.message})</div>`;
+});
+window.addEventListener("resize", ()=>{ clearTimeout(window.__gt); window.__gt=setTimeout(renderGraph, 200); });
+</script>
+</body>
+</html>
